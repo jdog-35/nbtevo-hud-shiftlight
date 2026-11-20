@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shift Light (My Vehicle): the HUD shift light's switches. Backend: libShiftLight.so (src/slplugin.cpp); ids in
+     src/slplugin_ids.h, checked by tests/test_plugin.py. Lists without positions, like BoostDeck's and ShiftDeck's
+     sub-menus; radio buttons like st1ng's CarPlay menu. No "Only in manual mode" row: this car reports
+     no gearbox mode to iDrive (driving.gear 5 and driving.shiftIndicator 0 in D, S and M1; nothing on MOST), 2026-11-19. Shift points up to 6,500: above it the car holds
+     revs and cuts power before orange can be acted on (test car, 2026-11-19). -->
+<pluginApps>
+  <pluginApp applicationType="VehicleInformation" applicationWeight="212" text="Shift Light">
+    <entryButton id="1" action="10">
+      <properties><property id="23" value="2" /></properties>
+    </entryButton>
+    <actions>
+      <hmiAction id="10" target="100" />
+      <raAction id="21" />
+      <hmiAction id="22" target="200" />
+      <raAction id="23" />
+      <raAction id="31" />
+      <raAction id="32" />
+      <raAction id="33" />
+      <raAction id="34" />
+      <raAction id="35" />
+      <raAction id="36" />
+      <raAction id="37" />
+    </actions>
+    <models>
+      <raBoolModel id="51" />
+      <raBoolModel id="53" />
+      <raBoolModel id="61" />
+      <raBoolModel id="62" />
+      <raBoolModel id="63" />
+      <raBoolModel id="64" />
+      <raBoolModel id="65" />
+      <raBoolModel id="66" />
+      <raBoolModel id="67" />
+    </models>
+    <hmiStates>
+      <hmiState id="100" text="Shift Light">
+        <components>
+          <checkbox id="151" action="21" model="51" text="Shift light" />
+          <button id="152" action="22" text="Shift point" />
+          <checkbox id="153" action="23" model="53" text="Only in SPORT and SPORT+" />
+        </components>
+      </hmiState>
+      <hmiState id="200" parentId="100" text="Shift point">
+        <components>
+          <radiobutton id="161" action="31" model="61" text="5,000 rpm" />
+          <radiobutton id="162" action="32" model="62" text="5,250 rpm" />
+          <radiobutton id="163" action="33" model="63" text="5,500 rpm" />
+          <radiobutton id="164" action="34" model="64" text="5,750 rpm" />
+          <radiobutton id="165" action="35" model="65" text="6,000 rpm" />
+          <radiobutton id="166" action="36" model="66" text="6,250 rpm" />
+          <radiobutton id="167" action="37" model="67" text="6,500 rpm" />
+        </components>
+      </hmiState>
+    </hmiStates>
+  </pluginApp>
+</pluginApps>

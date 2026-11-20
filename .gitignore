@@ -1,0 +1,13 @@
+# build output (releases carry the built files)
+out/
+
+# local logs: raw MOST traces contain the car's GPS position, never commit them
+logs/
+
+# private working notes
+PROGRESS.md
+CLAUDE.md
+
+.DS_Store
+__pycache__/
+*.o

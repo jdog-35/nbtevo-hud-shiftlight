@@ -1,0 +1,9 @@
+# The state the BMW navigation leaves the HUDTerminal in at the end of a route (st1ng's hud.h drawClear):
+# panel 1 off, both picture buffers emptied, the three texts emptied, the street text hidden.
+204 000100
+220 0005
+220 0006
+210 0002000000
+210 0003000000
+210 0004000000
+204 000200

@@ -1,0 +1,50 @@
+nbtevo-hud-shiftlight
+A shift light on the factory head-up display of BMW cars with NBT Evo (iDrive 6). A noncommercial hobby project.
+
+Licenses
+--------
+* Everything is under the MIT License (LICENSE), except:
+
+* src/slplugin.cpp (the My Vehicle menu plugin) is under the PolyForm Noncommercial License 1.0.0
+  (LICENSES/PolyForm-Noncommercial-1.0.0.txt). Its plugin skeleton follows nbtevo-carplay-advanced's src/cpm.cpp, and
+  its car-data subscription follows NBT-AAD's iDrive app. Both are PolyForm Noncommercial 1.0.0:
+  Required Notice: Copyright 2026 nbtevo-carplay-advanced contributors
+  Required Notice: Copyright (c) 2026 nanaisu - NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto)
+  So this file, and anything built from it (out/plugin/libShiftLight.so), may not be used commercially.
+
+* src/dsi.c and src/slrate.c follow code from ID6 Apps (https://github.com/inotbarnacle/ID6_apps_prerelease,
+  source/native/src/most), used under the MIT License:
+
+  MIT License
+
+  Copyright (c) 2026 ID6 Apps contributors
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+
+Knowledge used, no code copied
+------------------------------
+* nbtevo-carplay-advanced (st1ng, https://github.com/st1ng/nbtevo-carplay-advanced): the HUDTerminal protocol and the
+  6WA profile (src/hud.h); the freestanding clang + ld.lld build of LD_PRELOAD libraries and HMI plugins; the CarPlay
+  route file; the HUD test channel used for the colour and layout probes.
+* NBT-AAD (https://github.com/Sq00ky/Supra-iDrive6-Android-Auto): the HUDTerminal notes, the PluginApp ABI and the
+  car-data (CDS) property names.
+* ID6 Apps: the MOST/DSI client, and the parameters of QNX spawn() and waitpid() as their plugins call them.
+
+Not affiliated with or endorsed by BMW. BMW, iDrive, CarPlay and other names are trademarks of their owners, used here
+only to say what this works with.
