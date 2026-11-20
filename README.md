@@ -26,6 +26,13 @@ menu under **My Vehicle → Shift Light**, and needs no cable, phone or laptop o
 | 2 | about 0.35 s before it | longer white bars |
 | 3 | the shift point | one orange bar across |
 
+
+<img width="1206" height="813" alt="IMG_5024" src="https://github.com/user-attachments/assets/59df1140-08d2-4b30-8adc-c1b2714da261" />
+<img width="1206" height="818" alt="IMG_5025" src="https://github.com/user-attachments/assets/e05424a8-ab83-4d54-b5ca-9e07104e5833" />
+<img width="1206" height="806" alt="IMG_5026" src="https://github.com/user-attachments/assets/50afea1d-7e13-41af-875d-cbc96128d212" />
+
+
+
 - **Timed stages:** the white stages come a set time before the shift point, so they feel the same in every gear. In the
   low gears they are capped at 1,000 and 500 rpm before it.
 - **Upshifts:** when the revs fall like a shift, orange goes off at the first falling reading, with no stage in between.
