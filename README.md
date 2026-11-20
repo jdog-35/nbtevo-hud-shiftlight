@@ -9,7 +9,7 @@ menu under **My Vehicle → Shift Light**, and needs no cable, phone or laptop o
 > yourself before you trust it in yours.
 
 > **Likely no support, but discussion is welcome.** I'm not planning to fix every single bug or answer support request:
-> unfortunately am running tight on token usage, and am not super comfortable dealing with other car configurations by hand. 
+> unfortunately, I am running tight on token usage, and am not super comfortable dealing with other car configurations by hand. 
 > With that being said, you can start a [discussion](../../discussions) to share
 > findings, problems and fixes, so people with other cars can help each other. It's published so others can build on it,
 > like the projects it builds on: feel free to fork it and make it yours, within the licenses.
