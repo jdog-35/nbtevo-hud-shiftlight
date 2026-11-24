@@ -217,10 +217,21 @@ static void test_replay(const char *path)
     CHECK(!l.shown, "still shown at the end (rpm %d)", rpm[n - 1]);
 }
 
+static void test_since(void)
+{
+    CHECK(us_since(100, 250) == 150, "plain difference");
+    CHECK(us_since(0xFFFFFF00u, 0x100u) == 0x200u, "across the 71-minute wrap");
+    CHECK(us_since(1000, 1000) == 0, "same time");
+    CHECK(us_since(5000, 4000) == 0, "stamped 1 ms after now (was 71 minutes)");
+    CHECK(us_since(1000000u, 0) == 0, "stamped 1 s after now");
+    CHECK(us_since(3000000u, 0) == 0xFFFFFFFFu - 3000000u + 1u, "3 s ahead is not a race: a very old time");
+}
+
 int main(int argc, char **argv)
 {
     test_hud();
     test_div();
+    test_since();
     test_logic();
     if (argc > 1)
         test_replay(argv[1]);

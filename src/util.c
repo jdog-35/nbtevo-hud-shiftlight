@@ -33,3 +33,9 @@ u32 sl_hash(const u8 *p, u32 n)
         h = (h ^ p[i]) * 16777619u;
     return h;
 }
+
+u32 us_since(u32 t, u32 now)
+{
+    u32 d = now - t;
+    return d > 0xFFF00000u ? 0 : d;
+}

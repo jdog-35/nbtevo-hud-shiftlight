@@ -126,7 +126,7 @@ static void *watchdog(void *arg)
     (void)arg;
     for (;;) {
         usleep(250000);
-        if (now_us() - g_alive_us > 20000000u) {
+        if (us_since(g_alive_us, now_us()) > 20000000u) {
             out("shiftlight: watchdog: no progress for 20 s, exiting. If a bar stays on the HUD: SL_MODE=clear\n");
             _exit(3);
         }
@@ -701,7 +701,7 @@ static int run_bar(void)
             n_bc++;
             tag = 'b';
             rt = 0;
-        } else if (src == S_OBD || (src == S_AUTO && (!g_bc_seq || now - g_bc_us > 500000u))) {
+        } else if (src == S_OBD || (src == S_AUTO && (!g_bc_seq || us_since(g_bc_us, now) > 500000u))) {
             rc = dsi_tunnel_request(req, 2, rep, sizeof rep, &len, 1000, &rt, &nrc);
             if (rc == DSI_CLOSED) {
                 lost = 1;
@@ -723,7 +723,7 @@ static int run_bar(void)
             t_sample = now_us();
             tag = 'o';
         } else {
-            if (src == S_BROADCAST && now - t_warn > 5000000u && (!g_bc_seq || now - g_bc_us > 2000000u)) {
+            if (src == S_BROADCAST && now - t_warn > 5000000u && (!g_bc_seq || us_since(g_bc_us, now) > 2000000u)) {
                 t_warn = now;
                 out("shiftlight: no 05.00 CD0 broadcast for 2 s\n");
             }
@@ -950,7 +950,7 @@ static int run_stages(void)
             n_bc++;
             tag = 'b';
             rt = 0;
-        } else if (src == S_OBD || (src == S_AUTO && (!g_bc_seq || now - g_bc_us > 500000u))) {
+        } else if (src == S_OBD || (src == S_AUTO && (!g_bc_seq || us_since(g_bc_us, now) > 500000u))) {
             rc = dsi_tunnel_request(req, 2, rep, sizeof rep, &len, 1000, &rt, &nrc);
             if (rc == DSI_CLOSED) {
                 lost = 1;
@@ -972,7 +972,7 @@ static int run_stages(void)
             t_sample = now_us();
             tag = 'o';
         } else {
-            if (src == S_BROADCAST && now - t_warn > 5000000u && (!g_bc_seq || now - g_bc_us > 2000000u)) {
+            if (src == S_BROADCAST && now - t_warn > 5000000u && (!g_bc_seq || us_since(g_bc_us, now) > 2000000u)) {
                 t_warn = now;
                 out("shiftlight: no 05.00 CD0 broadcast for 2 s\n");
             }
@@ -1237,7 +1237,7 @@ static int svc_aside(struct svc_cfg *cfg)
         svc_read(cfg);
         if (!cfg->on)
             break;
-        quiet = now_us() - g_foreign_last_us;
+        quiet = us_since(g_foreign_last_us, now_us());
         if (route_active())
             continue;
         if ((cfg->car.v[4] == 0 && quiet >= 5000000u) || (cfg->car.v[4] < 0 && quiet >= 60000000u) || quiet >= 300000000u) {
@@ -1259,7 +1259,7 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
     struct hud_call c[SL_STAGE_MAX_CALLS];
     struct sl_stage_pics S;
     struct sl_logic L;
-    u32 n, i, t_poll = 0, t_route = 0, seen_bc, seen_night, t_last = 0, t_ms = 0, orange, t_drawn;
+    u32 n, i, t_poll = 0, t_route = 0, seen_bc, seen_night, t_last = 0, t_ms = 0, orange, t_drawn, t_start, gap_seq = 0;
     int rpm_set = cfg->rpm, gate = 1, was_gate = -1, target, last_rpm = 0, no_rpm = 0;
     /* one line per pull into events.log: from the earliest stage 1 point until it falls well below, or an upshift */
     int pull = 0, pull_max = 0, pull_shown = 0, pull_logic = 0, pull_hidden = 0, was_falling = 0;
@@ -1279,6 +1279,7 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
     seen_bc = g_bc_seq;
     seen_night = g_night_seq;
     t_drawn = now_us();
+    t_start = t_drawn;
     snprintf(b, sizeof b, "drawn (shift point %d, orange %u)", rpm_set, orange);
     svc_log(b);
     for (;;) {
@@ -1323,10 +1324,14 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
                 snprintf(b, sizeof b, "shift point %d", rpm_set);
                 svc_log(b);
             }
-            if (!no_rpm && now - g_bc_us > 5000000u) {
+            /* for the log: 5 s without a reading (from the start of this session if none came yet), and "back" at the
+               next reading. Until 2026-11-24 a reading that came in just after `now` was read looked 71 minutes old
+               here: 231 of the first 252 logged gaps were false ones. The bars were not affected. */
+            if (!no_rpm && us_since(g_bc_seq ? g_bc_us : t_start, now) > 5000000u) {
                 no_rpm = 1;
+                gap_seq = g_bc_seq;
                 svc_event("no rpm broadcast for 5 s");
-            } else if (no_rpm && now - g_bc_us < 1000000u) {
+            } else if (no_rpm && g_bc_seq != gap_seq) {
                 no_rpm = 0;
                 svc_event("the rpm broadcast is back");
             }
@@ -1401,7 +1406,7 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
                 }
             }
             was_falling = L.falling == 1;
-        } else if (!gate || now - g_bc_us > 1000000u) {
+        } else if (!gate || us_since(g_bc_us, now) > 1000000u) {
             target = 0; /* hidden, or no rpm for a second */
         }
         if (target != S.stage) {

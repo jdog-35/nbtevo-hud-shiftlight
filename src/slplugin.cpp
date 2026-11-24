@@ -17,8 +17,9 @@
 // What it does:
 //   * the menu switches are files in SLP_DIR (slplugin_ids.h); the worker reads them every second
 //   * "Shift light" on: starts the worker (spawn /bin/cat with LD_PRELOAD=shiftlight-worker.so), and a watcher thread
-//     starts it again 20 s after it ends; off: SIGTERM (the worker clears the HUD; it also stops by itself when the file
-//     "on" is gone). Each iDrive start adds a line to SLP_DIR/events.log, where the worker notes its rare events.
+//     starts it again when it ends (20 s after its start at the soonest); off: SIGTERM (the worker clears the HUD; it
+//     also stops by itself when the file "on" is gone). Each iDrive start adds a line to SLP_DIR/events.log, where the
+//     worker notes its rare events.
 //   * car data: the raw values go to SLP_CAR for the worker, and every change to the log (which value is which mode is
 //     found in the car and written to SLP_DIR/car-map)
 //   * boot guard: three iDrive starts in a row that end within kStableS of loading the plugin write SLP_DIR/disabled, and

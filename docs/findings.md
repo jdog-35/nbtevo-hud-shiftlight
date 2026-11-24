@@ -9,6 +9,39 @@ current state).
 - **"The driver":** the owner of the test car (a 2019 F32 430i, B46, ZF 8HP, NBT Evo ID6 with a 6WA cluster and HUD).
 - **Build numbers** (e.g. e5b2d4fc) are the first 8 hex digits of a build's SHA-256.
 
+# A week of events.log, and boost over MOST (2026-11-24)
+
+**Pulls** (`logs/2026-11-24-events.txt`): 71 pulls came within 500 rpm of the shift point (5,500, then 6,500 for a
+while, then 6,250). 59 showed orange. The other 12 all ended below the shift point (5,131–6,095 rpm), 11 of them by an
+upshift. At 6,250 the upshifts came at ~5,750–6,100, either the driver's or the gearbox's own; the log can't tell
+which. They showed white stage 1 or 2, as designed.
+
+**"No rpm broadcast for 5 s":** 252 such lines. 231 were false: "back" came at the next 1 s check or the one after.
+The service loop reads `now` at the top of an iteration, then reads its settings files. A CD0 reading arriving in
+between is stamped by the DSI thread after `now`, so `now - g_bc_us` wrapped to ~71 minutes. The flag only wrote the
+log, so the bars were not affected. The other 21 were real: 6 came back after 14 s to 6 min, and 15 never came back
+before the worker ended, most likely with the engine off.
+- **The same race elsewhere:** the watchdog reads the clock before loading `g_alive_us`, which the main loop stores
+  every ~2 ms. A hit would `_exit(3)`: the plugin starts a new worker at once, and the bars are gone for the ~6 s it
+  takes to draw. The log has no unexplained restart, so it never fired. Also in the step-aside quiet time, and (dev
+  modes) the OBD fallback and the 2 s warning.
+- **Fix:** `us_since(t, now)` in `src/util.c` gives 0 when `t` is up to ~1 s after `now`, and "back" now comes at the
+  next reading (by sequence number). Tested in `tests/test_pure.c`. Worker e6c50a98 is on the car: 3 minutes parked without a false gap, where the old
+  one logged about one a minute.
+- **After the ID6 apps update**, CD0 arrives addressed to 0x2018 instead of 0x2021. The worker filters on the sender
+  (0x5000) only, so this has no effect.
+
+**Boost over MOST** (read-only, parked, engine running): `libslrate.so` with `SL_DID=4205`, the DME (12) DID that
+BoostDeck uses for boost. It is absolute charge pressure, raw ÷ 128 kPa; ambient is 4201, raw ÷ 256.
+- **Speed:** 800 of 800 answered. Round trip median 77 ms (52–91), 13.1 reads/s, no timeouts.
+- **Fresh on every read:** the value changed on 566 of 799 consecutive reads. Idle was 102.35 ± 0.01 kPa, so those
+  changes are the last bits. OBD `01 0C` rpm, by contrast, refreshes only every ~200 ms.
+- **Three free-rev blips:** the pressure dips to ~99 kPa as the throttle opens, jumps to 106–111 kPa within one read
+  when it closes, then decays over ~3 s. Free revs make no real boost (~1.2 psi at most).
+- **So:** a HUD boost number could be read ~13 times a second without the cable. The HUD is the limit: one SetText per
+  update, an estimated ~4 updates a second next to the shift light's calls, against ~1.2 a second for HUD Gauges'
+  8–9-call batches. It would have to take the ID6 apps' diagnostics lease to share the tunnel with them.
+
 # After a weekend of driving: logs and the 5th-gear gap (2026-11-23)
 
 **Reported by the driver:** once the bars didn't draw; later "something weird"; and no bars at all when throttling
