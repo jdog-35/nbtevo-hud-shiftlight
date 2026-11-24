@@ -40,7 +40,7 @@ for s in qnx dsi hud logic stages gate util shiftlight; do
   OBJS+=(out/$s.o)
 done
 "${LD[@]}" -soname libshiftlight.so -o out/libshiftlight.so "${OBJS[@]}" -Lout/stubs -l:libsocket.so.3 -l:libc.so.3
-ALLOW2="$ALLOW read open close signal kill getpid unlink "
+ALLOW2="$ALLOW read open close signal kill getpid unlink rename time "
 for s in $(nm -D -u out/libshiftlight.so | awk '{print $NF}'); do
   [[ "$ALLOW2" == *" $s "* ]] || { echo "unexpected import in libshiftlight.so: $s"; bad=1; }
 done

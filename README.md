@@ -35,7 +35,8 @@ menu under **My Vehicle → Shift Light**, and needs no cable, phone or laptop o
 </table>
 
 - **Timed stages:** the white stages come a set time before the shift point, so they feel the same in every gear. In the
-  low gears they are capped at 1,000 and 500 rpm before it.
+  low gears they are capped at 1,000 and 500 rpm before it. On a slow climb (5th gear near 100 mph) they still come
+  at least 300 and 150 rpm before it.
 - **Upshifts:** when the revs fall like a shift, orange goes off at the first falling reading, with no stage in between.
 - **Day and night:** the orange follows the car's day/night signal.
 - **Drive modes:** an option shows the light only in SPORT and SPORT+.
@@ -123,8 +124,9 @@ car's current file to `out/archive/`.
     (`src/stages.c`), which matters because the cluster takes about 250 ms to confirm a call.
 - **On the HUD:** calls go to the cluster's HUDTerminal (MOST FBlock 82/00) with the encodings in `src/hud.h`. Colours are
   palette indexes: on the test car white is 6, and orange is 8 by day and 4 at night.
-- **Logs:** `tools/plugin.sh status` shows the switches, the car data, both logs, and `events.log`. That file keeps rare
-  events across restarts.
+- **Logs:** `tools/plugin.sh status` shows the switches, the car data, both logs, and `events.log`. That file keeps,
+  across restarts and with the head unit's clock (UTC): starts and ends, routes, drive-mode changes, and one line per pull
+  that comes near the shift point (top rpm, the stage shown, whether Only in SPORT hid it).
 
 ## Building on it
 

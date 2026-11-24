@@ -9,6 +9,41 @@ current state).
 - **"The driver":** the owner of the test car (a 2019 F32 430i, B46, ZF 8HP, NBT Evo ID6 with a 6WA cluster and HUD).
 - **Build numbers** (e.g. e5b2d4fc) are the first 8 hex digits of a build's SHA-256.
 
+# After a weekend of driving: logs and the 5th-gear gap (2026-11-23)
+
+**Reported by the driver:** once the bars didn't draw; later "something weird"; and no bars at all when throttling
+through 5th around 100+ mph.
+
+**What `events.log` showed** (17 iDrive starts since the update, `logs/2026-11-23-events.txt`):
+- **Every start:** the worker started normally at ~24 s. No crash, no "MOST link gone", and no step-aside except the
+  route tests.
+- **Start 4:** the worker ran 22 minutes, made 26 stage changes, then was stopped and restarted at once (the menu
+  untick/tick). The files `on` and `sport-only` carry the time of that re-tick. Why the bars didn't show before it can't
+  be told: the event log didn't record drive-mode changes or the stages.
+- **The "something weird":** nothing beyond a normal start.
+
+**5th gear:** the timed white stages come 0.7 / 0.35 s before the shift point. At ~150 rpm/s, the climb near 100 mph in
+5th, that is only ~100 rpm. Simulated through `src/logic.c` (shift point 5,500):
+
+| Climb rate | Stage 1 | Stage 2 | Orange |
+| --- | --- | --- | --- |
+| 100 rpm/s | 5,419 | 5,460 | 5,490 |
+| 150 rpm/s | 5,375 | 5,436 | 5,481 |
+| 200 rpm/s | 5,341 | 5,401 | 5,479 |
+| 600 rpm/s | 5,121 | 5,240 | 5,420 |
+
+A 5th-gear pull ending short of ~5,400 showed nothing.
+
+**Fixes (worker 3c2f3da7, not on the car yet):**
+- **Minimum lead:** the white stages come at least 300 / 150 rpm before the shift point (`lead_min`). On a slow climb
+  stage 1 is at ~5,180, 1.5–3 s ahead of orange. At 600 rpm/s and faster nothing changes. Tests: 150 rpm/s gives
+  stage 1 2.07 s and stage 2 1.07 s before orange.
+- **`events.log` with the head unit's clock (UTC):** drive-mode changes (shown / hidden); one line per pull that reaches
+  within 500 rpm of the shift point (top rpm, stage shown, logic stage, hidden by Only in SPORT, ended by an upshift or
+  not); "no rpm broadcast for 5 s" and back. Past ~30 KB it is renamed `events.old.log`.
+- **Idle redraw:** at stage 0, below 3,000 rpm and not climbing, the pictures are drawn again unseen every 2 minutes,
+  in case something wiped them (the Friday case was fixed by a re-tick, which also redraws).
+
 # Living with the app: first drives (2026-11-19, evening)
 
 **Route tests, parked (2026-11-19 evening):**

@@ -30,6 +30,8 @@ sl_sighandler signal(int, sl_sighandler);
 int kill(int, int);
 int getpid(void);
 int unlink(const char *);
+int rename(const char *, const char *);
+long time(long *); /* seconds since 1970 (UTC), the head unit's clock */
 
 #define QNX_CLOCK_MONOTONIC 2
 #define QNX_RTLD_NOW_GLOBAL 0x102 /* RTLD_NOW | RTLD_GLOBAL, as ID6's shift-deck-qnx passes them */

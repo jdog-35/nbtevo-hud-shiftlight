@@ -15,7 +15,11 @@
  *
  *   on[s] = max(th[s], th[3] - rate * time_ms[s])        (s = 1, 2; not climbing: th[3])
  *
- * so in every gear each white stage lasts about the same time (in 1st and 2nd th[1] and th[2] decide).
+ * so in every gear each white stage lasts about the same time (in 1st and 2nd th[1] and th[2] decide). A slow climb
+ * still gets them at least lead_min[s] before the shift point (300 / 150 rpm since 2026-11-23: in 5th they came only
+ * ~100 rpm before it, so a pull ending just short of the shift point showed nothing):
+ *
+ *   on[s] = max(th[s], min(th[3] - rate * time_ms[s], th[3] - lead_min[s]))
  * Up at once to the highest stage with pred >= on[s]. Down to the highest stage still held (v1 >= the on[s] it came up
  * at - hyst, or pred >= on[s]) once the current one has lasted min_on_ms.
  * A shift: the revs falling faster than fall_rpm_s (upshifts fell 4,800-9,400 rpm/s, lifting off at most 2,700). The
@@ -34,6 +38,8 @@ struct sl_logic {
     int on_rpm, hyst;
     int th[4];         /* stages: th[3] the shift point, th[1] < th[2] < th[3] the earliest the white stages come */
     u32 time_ms[4];    /* stages: how long before the shift point stages 1 and 2 come (0: always at th[s]) */
+    int lead_min[4];   /* stages, timed: stages 1 and 2 come at least this many rpm before the shift point, however
+                          slowly the revs climb (5th gear near 100 mph climbs ~150 rpm/s: 0.7 s is ~100 rpm) */
     int fall_rpm_s;    /* stages: a fall at least this fast is a shift (0: off) */
     int fall_cut;      /* stages, timed: off at the first reading of a shift's fall (it always lands below th[3]) */
     u32 lead_ms, min_on_ms, max_horizon_ms, stale_ms, max_dt_ms, rate_ms, fall_quiet_ms, fall_max_ms;

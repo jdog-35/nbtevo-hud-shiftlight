@@ -27,6 +27,8 @@ void sl_stages_init(struct sl_logic *l, int t1, int t2, int t3, int hyst, u32 le
     for (s = 1; s <= 3; s++)
         l->on[s] = l->on_at[s] = l->th[s];
     sl_stages_tune(l, 700, 350, 3000);
+    l->lead_min[1] = 300;
+    l->lead_min[2] = 150;
     l->fall_cut = 1;
 }
 
@@ -152,6 +154,8 @@ static void stage_on(struct sl_logic *l, int r)
             continue;
         }
         x = l->th[3] - (r > 0 ? sl_sdiv(r * (int)l->time_ms[s], 1000) : 0);
+        if (x > l->th[3] - l->lead_min[s])
+            x = l->th[3] - l->lead_min[s]; /* a slow climb: at least lead_min[s] before the shift point */
         l->on[s] = x > l->th[s] ? x : l->th[s];
     }
 }

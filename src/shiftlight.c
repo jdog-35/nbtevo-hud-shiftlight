@@ -1080,12 +1080,25 @@ static void svc_log(const char *s)
     OUTF("%7ld s  shiftlight: %s\n", t.sec, s);
 }
 
-/* a rare event: the RAM log, and SL_DIR/events.log on flash (started again when it passes ~32 KB) */
+/* "2026-01-31 12:34:56" (UTC) from seconds since 1970, into b[24] (days to a date: Howard Hinnant's civil_from_days) */
+static void utc_text(char *b, long secs)
+{
+    u32 s = secs > 0 ? (u32)secs : 0u, days = sl_udiv(s, 86400u), sod = s - days * 86400u;
+    u32 z = days + 719468u, era = sl_udiv(z, 146097u), doe = z - era * 146097u;
+    u32 yoe = sl_udiv(doe - sl_udiv(doe, 1460u) + sl_udiv(doe, 36524u) - sl_udiv(doe, 146096u), 365u);
+    u32 doy = doe - (365u * yoe + sl_udiv(yoe, 4u) - sl_udiv(yoe, 100u)), mp = sl_udiv(5u * doy + 2u, 153u);
+    u32 d = doy - sl_udiv(153u * mp + 2u, 5u) + 1u, m = mp < 10u ? mp + 3u : mp - 9u, y = yoe + era * 400u + (m <= 2u);
+    snprintf(b, 24, "%04u-%02u-%02u %02u:%02u:%02u", y, m, d, sl_udiv(sod, 3600u), sl_udiv(sod % 3600u, 60u), sod % 60u);
+}
+
+/* a rare event: the RAM log, and SL_DIR/events.log on flash with the head unit's clock (UTC). Past ~30 KB it is renamed
+   events.old.log and a new one begins, so the last drives are always there (the plugin empties a file over 32 KB). */
 static u32 g_events_bytes = 0xffffffffu; /* unknown until the first event */
+static u32 g_redraws;                    /* idle redraws of the pictures */
 static void svc_event(const char *s)
 {
     struct sl_timespec t;
-    char p[200], b[320];
+    char p[200], b[360], w[24];
     int fd, n, flags = QNX_O_WRONLY | QNX_O_CREAT | QNX_O_APPEND;
     svc_log(s);
     snprintf(p, sizeof p, "%s/%s", g_dir, SLP_F_EVENTS);
@@ -1100,12 +1113,16 @@ static void svc_event(const char *s)
             close(fd);
         }
     }
-    if (g_events_bytes > 32768u) {
-        flags = QNX_O_WRONLY | QNX_O_CREAT | QNX_O_TRUNC;
+    if (g_events_bytes > 30000u) {
+        char old[200];
+        snprintf(old, sizeof old, "%s/events.old.log", g_dir);
+        if (rename(p, old) != 0)
+            flags = QNX_O_WRONLY | QNX_O_CREAT | QNX_O_TRUNC;
         g_events_bytes = 0;
     }
     clock_gettime(QNX_CLOCK_MONOTONIC, &t);
-    n = snprintf(b, sizeof b, "%7ld s  worker %d: %s\n", t.sec, getpid(), s);
+    utc_text(w, time(0));
+    n = snprintf(b, sizeof b, "%s UTC %6ld s  worker %d: %s\n", w, t.sec, getpid(), s);
     if (n < 0)
         return;
     if (n > (int)sizeof b - 1)
@@ -1242,8 +1259,10 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
     struct hud_call c[SL_STAGE_MAX_CALLS];
     struct sl_stage_pics S;
     struct sl_logic L;
-    u32 n, i, t_poll = 0, t_route = 0, seen_bc, seen_night, t_last = 0, t_ms = 0, orange;
-    int rpm_set = cfg->rpm, gate = 1, was_gate = -1, target;
+    u32 n, i, t_poll = 0, t_route = 0, seen_bc, seen_night, t_last = 0, t_ms = 0, orange, t_drawn;
+    int rpm_set = cfg->rpm, gate = 1, was_gate = -1, target, last_rpm = 0, no_rpm = 0;
+    /* one line per pull into events.log: from the earliest stage 1 point until it falls well below, or an upshift */
+    int pull = 0, pull_max = 0, pull_shown = 0, pull_logic = 0, pull_hidden = 0, was_falling = 0;
     const char *why = "on";
     char b[200];
 
@@ -1259,6 +1278,7 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
     svc_logic(&L, rpm_set);
     seen_bc = g_bc_seq;
     seen_night = g_night_seq;
+    t_drawn = now_us();
     snprintf(b, sizeof b, "drawn (shift point %d, orange %u)", rpm_set, orange);
     svc_log(b);
     for (;;) {
@@ -1303,11 +1323,31 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
                 snprintf(b, sizeof b, "shift point %d", rpm_set);
                 svc_log(b);
             }
+            if (!no_rpm && now - g_bc_us > 5000000u) {
+                no_rpm = 1;
+                svc_event("no rpm broadcast for 5 s");
+            } else if (no_rpm && now - g_bc_us < 1000000u) {
+                no_rpm = 0;
+                svc_event("the rpm broadcast is back");
+            }
+            /* Idle, at low revs: the pictures drawn again, unseen (panel off), every 2 minutes. Something can wipe them
+               without a call we see (after BMW guidance it is the navigation; on 2026-11-20 the bars did not show until
+               "Shift light" was ticked again); a pull starting meanwhile waits behind ~10 calls, ~1 s at most. */
+            if (S.stage == 0 && last_rpm < 3000 && (L.rate < 500 && L.rate > -500) && now - t_drawn >= 120000000u) {
+                struct hud_call r[SL_STAGE_MAX_CALLS + 1];
+                hud_vis(&r[0], HUD_FRAME, 0);
+                sl_stage_init(&S, (int)g_x0, (int)g_x1, (int)g_y0, (int)g_h, 20, 35, white, (u8)orange);
+                n = (u32)sl_stage_setup(&S, r + 1);
+                for (i = 0; i <= n; i++)
+                    hud_send(&r[i], 0, 0, 0);
+                t_drawn = now_us();
+                g_redraws++;
+            }
             gate = sl_gate(&cfg->car, &cfg->map, cfg->sport, cfg->manual, &why);
             if (gate != was_gate) {
-                snprintf(b, sizeof b, "%s %s (mode %d, gear %d, guidance %d, pwf %d)", gate ? "showing:" : "hidden:",
-                         why, cfg->car.v[0], cfg->car.v[2], cfg->car.v[4], cfg->car.v[5]);
-                svc_log(b);
+                snprintf(b, sizeof b, "%s %s (mode %d, gear %d, guidance %d)", gate ? "showing:" : "hidden:", why,
+                         cfg->car.v[0], cfg->car.v[2], cfg->car.v[4]);
+                svc_event(b);
                 was_gate = gate;
             }
         }
@@ -1336,6 +1376,31 @@ static int svc_session(struct svc_cfg *cfg, u8 white, u32 c_day, u32 c_night, u3
             t_last = ts;
             sl_stages_feed(&L, t_ms, rpm);
             target = gate ? L.stage : 0;
+            last_rpm = rpm;
+            if (!pull && rpm >= rpm_set - 1000) {
+                pull = 1;
+                pull_max = pull_shown = pull_logic = pull_hidden = 0;
+            }
+            if (pull) {
+                if (rpm > pull_max)
+                    pull_max = rpm;
+                if (L.stage > pull_logic)
+                    pull_logic = L.stage;
+                if (target > pull_shown)
+                    pull_shown = target;
+                if (!gate)
+                    pull_hidden = 1;
+                if (rpm < rpm_set - 1500 || (L.falling == 1 && !was_falling)) {
+                    if (pull_max >= rpm_set - 500) { /* near the shift point: worth a line */
+                        snprintf(b, sizeof b, "pull to %d rpm: shown stage %d (logic %d)%s, mode %d, %s", pull_max,
+                                 pull_shown, pull_logic, pull_hidden ? ", hidden by Only in SPORT" : "",
+                                 cfg->car.v[0], L.falling == 1 ? "ended by an upshift" : "revs dropped");
+                        svc_event(b);
+                    }
+                    pull = 0;
+                }
+            }
+            was_falling = L.falling == 1;
         } else if (!gate || now - g_bc_us > 1000000u) {
             target = 0; /* hidden, or no rpm for a second */
         }
@@ -1453,8 +1518,8 @@ static int run_service(void)
         rc = r == SV_LOST ? 11 : r == SV_FAIL ? 12 : 0;
         break;
     }
-    snprintf(b, sizeof b, "service end (%d), %u stage changes, cluster answers %u, errors %u", rc, changes, g_answers,
-             g_errors);
+    snprintf(b, sizeof b, "service end (%d), %u stage changes, %u idle redraws, cluster answers %u, errors %u", rc, changes,
+             g_redraws, g_answers, g_errors);
     svc_event(b);
     dsi_stop();
     unlink(SLP_PID);

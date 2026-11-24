@@ -378,12 +378,12 @@ static void test_logic(void)
 static void test_timed(void)
 {
     static const int th[4] = { 0, 4500, 5000, 5500 };
-    static const double rates[] = { 300, 600, 900, 1300, 2000, 3300, 4300 };
+    static const double rates[] = { 150, 300, 600, 900, 1300, 2000, 3300, 4300 };
     unsigned k;
-    printf("timed stages, shift point 5,500, 700 / 350 ms (broadcast; ms before the true crossing of 5,500, before "
-           "the HUD call):\n     rpm/s   stage 1   stage 2   stage 3    1->2   2->3\n");
+    printf("timed stages, shift point 5,500, 700 / 350 ms, at least 300 / 150 rpm (broadcast; ms before the true crossing "
+           "of 5,500, before the HUD call):\n     rpm/s   stage 1   stage 2   stage 3    1->2   2->3\n");
     for (k = 0; k < sizeof rates / sizeof rates[0]; k++) {
-        double r = rates[k], from = r < 1000 ? 4000 : 2500, cross3 = (5500 - from) / r * 1000.0;
+        double r = rates[k], from = r < 1000 ? 5500 - r * 4.5 : 2500, cross3 = (5500 - from) / r * 1000.0;
         double up[4], sum[4] = { 0 }, lo[4], hi[4], ph;
         int n = 0, s;
         for (s = 1; s <= 3; s++) {
@@ -404,11 +404,17 @@ static void test_timed(void)
             CHECK(up[1] < up[2] && up[2] < up[3], "%.0f rpm/s: stages out of order (%.0f %.0f %.0f)", r, up[1], up[2],
                   up[3]);
             if (r <= 1300) {
-                /* the timed part: each white stage the set time before the shift point, whatever the gear */
-                CHECK(up[3] - up[1] >= 580 && up[3] - up[1] <= 820, "%.0f rpm/s: stage 1 %.0f ms before 3, want ~700",
-                      r, up[3] - up[1]);
-                CHECK(up[3] - up[2] >= 230 && up[3] - up[2] <= 470, "%.0f rpm/s: stage 2 %.0f ms before 3, want ~350",
-                      r, up[3] - up[2]);
+                /* the timed part: each white stage the set time before the shift point, whatever the gear, and at
+                   least 300 / 150 rpm before it on a slow climb (5th near 100 mph) */
+                double e1 = 700, e2 = 350;
+                if (300000.0 / r > e1)
+                    e1 = 300000.0 / r;
+                if (150000.0 / r > e2)
+                    e2 = 150000.0 / r;
+                CHECK(up[3] - up[1] >= e1 - 120 && up[3] - up[1] <= e1 + 120, "%.0f rpm/s: stage 1 %.0f ms before 3, want ~%.0f",
+                      r, up[3] - up[1], e1);
+                CHECK(up[3] - up[2] >= e2 - 120 && up[3] - up[2] <= e2 + 120, "%.0f rpm/s: stage 2 %.0f ms before 3, want ~%.0f",
+                      r, up[3] - up[2], e2);
             } else {
                 /* fast gears: the earliest points decide, as on the drive */
                 for (s = 1; s <= 2; s++) {
